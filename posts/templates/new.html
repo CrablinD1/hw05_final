@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+{% block title %}Новая запись{% endblock %}
+{% block content %}
+{% load user_filters %}
+<!--<div class="row justify-content-left">-->
+{% if post %}
+    <h1>Редактировать запись</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">
+                    Редактировать
+            </button>
+    </form>
+{% else %}
+    <h1>Добавить запись</h1>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+                <button type="submit" class="btn btn-primary">
+                        Добавить
+                </button>
+        </form>
+{% endif %}
+<!--</div>-->
+{% endblock %}

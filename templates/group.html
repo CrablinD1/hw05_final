@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+{% load thumbnail %}
+
+<title>Записи сообщества {{ group.title }} | Yatube</title>
+<h1>{{group.title}}</h1>
+<p>
+{{group.description}}
+</p>
+<b>Всего записей:  {{group.group_posts.count}}</b>
+
+{% for post in page %}
+    {% include "post_item.html" with post=post items=items %}
+
+{%endfor%}
+
+{% if page.has_other_pages %}
+        {% include "paginator.html" with items=page paginator=paginator%}
+    {% endif %}
+{% endblock %}
+<hr>
