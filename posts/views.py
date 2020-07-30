@@ -20,7 +20,8 @@ def index(request):
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
-    return render(request, 'index.html', {'page': page, 'paginator': paginator})
+    return render(request, 'index.html',
+                  {'page': page, 'paginator': paginator})
 
 
 @login_required
@@ -43,7 +44,8 @@ def profile(request, username):
     followers = Follow.objects.filter(author=author.id).count()
     following = Follow.objects.filter(user=author.id).count()
     if request.user.username:
-        follow_status = Follow.objects.filter(author=author.id, user=request.user)
+        follow_status = Follow.objects.filter(author=author.id,
+                                              user=request.user)
     paginator = Paginator(posts, 10)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
@@ -77,18 +79,20 @@ def post_view(request, username, post_id):
     return render(request, "post.html", context_dict)
 
 
-
 @login_required
 def post_edit(request, username, post_id):
     profile = get_object_or_404(User, username=username)
     post = get_object_or_404(Post, pk=post_id, author=profile)
     if request.user != profile:
-        return redirect("post", username=request.user.username, post_id=post_id)
-    form = PostForm(request.POST or None, files=request.FILES or None, instance=post)
+        return redirect("post", username=request.user.username,
+                        post_id=post_id)
+    form = PostForm(request.POST or None, files=request.FILES or None,
+                    instance=post)
     if request.method == "POST":
         if form.is_valid():
             form.save()
-            return redirect("post", username=request.user.username, post_id=post_id)
+            return redirect("post", username=request.user.username,
+                            post_id=post_id)
     return render(request, "new.html", {"form": form, "post": post})
 
 
@@ -96,7 +100,8 @@ def post_edit(request, username, post_id):
 def post_delete(request, username, post_id):
     profile = get_object_or_404(User, username=username)
     if request.user != profile:
-        return redirect("post", username=request.user.username, post_id=post_id)
+        return redirect("post", username=request.user.username,
+                        post_id=post_id)
     Post.objects.filter(id=post_id).delete()
     return redirect("profile", username=request.user.username)
 
@@ -131,15 +136,18 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    already_followed = Follow.objects.filter(user=request.user.id, author=author.id).exists()
-    if author.id != request.user.id and not already_followed: Follow.objects.create(user=request.user, author=author)
+    already_followed = Follow.objects.filter(user=request.user.id,
+                                             author=author.id).exists()
+    if author.id != request.user.id and not already_followed:
+        Follow.objects.create(user=request.user, author=author)
     return redirect('profile', username=username)
 
 
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    already_followed = Follow.objects.filter(user=request.user.id, author=author.id).exists()
+    already_followed = Follow.objects.filter(user=request.user.id,
+                                             author=author.id).exists()
     if already_followed:
         Follow.objects.filter(user=request.user.id, author=author.id).delete()
     return redirect('profile', username)

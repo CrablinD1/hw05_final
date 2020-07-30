@@ -1,8 +1,12 @@
 from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from posts.models import User, Post, Group, Follow, Comment
+from django.core.files.base import ContentFile
+from PIL import Image
 
 import time
+import tempfile
+import io
 
 TEST_CACHES = {
     'default': {
@@ -17,19 +21,25 @@ def check_text(client, user, post, text):
 
     # Проверяем публикацию на персональной странице пользователя
     response = client.get("/sarah/")
-    assert response.context['total_posts'] == 1, 'На странице пользователя неправильно отображается количество постов'
-    assert text in response.content.decode('utf8'), 'Не найден текст поста на странице'
+    assert response.context[
+               'total_posts'] == 1, \
+        'На странице пользователя неправильно отображается количество постов'
+    assert text in response.content.decode('utf8'), \
+        'Не найден текст поста на странице'
 
     # Проверяем публикацию на странице публикации
-    url = reverse('post', kwargs={'username': user.username, 'post_id': post.pk})
+    url = reverse('post',
+                  kwargs={'username': user.username, 'post_id': post.pk})
     response = client.get(url)
     assert response.status_code == 200, 'Страница публикации не найдена'
-    assert response.context['post'].text == text, 'На странице публикации неправильный текст'
+    assert response.context['post'].text == text, \
+        'На странице публикации неправильный текст'
 
     # Проверяем публикацию на главной странице
     url = reverse('index')
     response = client.get(url)
-    assert text in response.content.decode('utf8'), 'Не найден текст поста на странице'
+    assert text in response.content.decode(
+        'utf8'), 'Не найден текст поста на странице'
 
 
 class ProfileTest(TestCase):
@@ -50,7 +60,7 @@ class ProfileTest(TestCase):
         self.auth_client.force_login(self.user)
 
     def test_profile(self):
-        """После регистрации пользователя создается его персональная страница"""
+        """После регистрации пользователя создается его перс. страница"""
         # формируем GET-запрос к странице сайта
         response = self.auth_client.get("/sarah/")
 
@@ -58,7 +68,8 @@ class ProfileTest(TestCase):
         try:
             self.assertEqual(response.status_code, 200)
         except Exception as e:
-            assert False, f'''Страница пользователя работает неправильно. Ошибка: `{e}`'''
+            assert False, f'''Страница пользователя работает неправильно. 
+            Ошибка: `{e}`'''
 
     def test_new_post(self):
         """Авторизованный пользователь может опубликовать пост (new)"""
@@ -71,20 +82,24 @@ class ProfileTest(TestCase):
             response = self.auth_client.get(url, follow=True)
             self.assertEqual(response.status_code, 200)
         except Exception as e:
-            assert False, f'''Страница `/new` работает неправильно. Ошибка: `{e}`'''
+            assert False, f'''Страница `/new` работает неправильно. 
+            Ошибка: `{e}`'''
 
         # Проверяем перенаправление на главную страницу сайта
         response = self.auth_client.post(url, data={'text': self.post.text})
         try:
             self.assertIn(response.status_code, (301, 302))
         except Exception as e:
-            assert False, f'''Не перенаправляет на главную страницу. Ошибка: `{e}`'''
+            assert False, f'''Не перенаправляет на главную страницу. 
+            Ошибка: `{e}`'''
 
-        assert response.url == url_index, 'Не перенаправляет на главную страницу `/`'
+        assert response.url == url_index, \
+            'Не перенаправляет на главную страницу `/`'
 
     def test_check_new_post(self):
-        """После публикации поста новая запись появляется на главной странице сайта (index)
-        , на персональной странице пользователя (profile),
+        """После публикации поста новая запись появляется
+        на главной странице сайта (index),
+        на персональной странице пользователя (profile),
         и на отдельной странице поста (post)"""
 
         check_text(self.auth_client, self.user, self.post, self.post.text)
@@ -93,22 +108,26 @@ class ProfileTest(TestCase):
         """Неавторизованный посетитель не может опубликовать пост
         (его редиректит на страницу входа)"""
 
-        response = self.non_auth_client.post("/new/", data={'text': self.post.text})
-        assert response.status_code in (301, 302), 'Не перенаправляет на другую страницу'
+        response = self.non_auth_client.post("/new/",
+                                             data={'text': self.post.text})
+        assert response.status_code in (
+            301, 302), 'Не перенаправляет на другую страницу'
 
     @override_settings(CACHES=TEST_CACHES)
     def test_edit_post(self):
         """Авторизованный пользователь может отредактировать свой пост
         и его содержимое изменится на всех связанных страницах"""
 
-        url = reverse('post_edit', kwargs={'username': self.user.username, 'post_id': self.post.pk})
+        url = reverse('post_edit', kwargs={'username': self.user.username,
+                                           'post_id': self.post.pk})
 
         # Проверяем, что страница редактирования поста найдена
         try:
             response = self.auth_client.get(url, follow=True)
             self.assertEqual(response.status_code, 200)
         except Exception as e:
-            assert False, f'''Страница редактирования поста работает неправильно. Ошибка: `{e}`'''
+            assert False, f'''Страница редактирования поста 
+            работает неправильно. Ошибка: `{e}`'''
 
         # Редактируем данный пост
         new_text = 'Отредактированный текст поста'
@@ -116,12 +135,14 @@ class ProfileTest(TestCase):
         try:
             self.assertIn(response.status_code, (301, 302))
         except Exception as e:
-            assert False, f'''Не перенаправляет на главную страницу. Ошибка: `{e}`'''
+            assert False, f'''Не перенаправляет на главную страницу. 
+            Ошибка: `{e}`'''
 
         check_text(self.auth_client, self.user, self.post, new_text)
 
     def test_page_not_found_404(self):
-        """Для своего локального проекта напишите тест: возвращает ли сервер код 404, если страница не найдена."""
+        """Для своего локального проекта напишите тест:
+        возвращает ли сервер код 404, если страница не найдена."""
 
         url = "wrong_page"
         response = self.client.get(url)
@@ -140,7 +161,8 @@ class PostTest6(TestCase):
         self.user = User.objects.create_user(
             username="sarah", email="connor.s@skynet.com", password="12345"
         )
-        self.group = Group.objects.create(title='Test Group', slug='tg', description='testing group')
+        self.group = Group.objects.create(title='Test Group', slug='tg',
+                                          description='testing group')
         self.post = Post.objects.create(text="Testing post.", author=self.user)
         self.user1 = User.objects.create_user(
             username="user1", email="user1@mail.com", password="111111111111"
@@ -148,39 +170,37 @@ class PostTest6(TestCase):
         self.user2 = User.objects.create_user(
             username="user2", email="user1@mail.com", password="222222222222"
         )
-        self.test_image = "media/posts/test.jpg"
 
     @override_settings(CACHES=TEST_CACHES)
     def test_post_with_img(self):
-        """проверяют страницу конкретной записи с картинкой."""
+        """проверяют страницу конкретной записи с картинкой,
+        на главной странице, на странице профайла
+        и на странице группы пост с картинкой отображается корректно"""
 
         self.client.force_login(self.user)
-        with open(self.test_image, mode='rb') as img:
+        with tempfile.TemporaryDirectory() as temp_directory:
+            with override_settings(MEDIA_ROOT=temp_directory):
+                byte_image = io.BytesIO()
+                im = Image.new("RGB", size=(1000, 1000), color=(255, 0, 0, 0))
+                im.save(byte_image, format='jpeg')
+                byte_image.seek(0)
+                image = ContentFile(byte_image.read(), name='test.jpeg')
             self.client.post("/new/",
                              {"text": 'Testing post with image',
-                              'image': img})
+                              'image': image,
+                              'group': self.group.id})
         response = self.client.get(f"/{self.user.username}/")
-        self.assertContains(response, 'img')
-
-    @override_settings(CACHES=TEST_CACHES)
-    def test_post_with_img_everywhere(self):
-        """проверяют, что на главной странице, на странице профайла
-        и на странице группы пост с картинкой отображается корректно."""
-
-        self.client.force_login(self.user)
-        with open(self.test_image, 'rb') as img:
-            self.client.post('/new/', {'text': 'new text', 'image': img,
-                                       'group': self.group.id})
         response_index = self.client.get(f"/")
         response_profile = self.client.get(f"/{self.user.username}/")
         response_group = self.client.get(f"/group/{self.group.slug}/")
-        self.assertContains(response_index, 'img')
-        self.assertContains(response_profile, 'img')
-        self.assertContains(response_group, 'img')
+        self.assertContains(response, 'image')
+        self.assertContains(response_index, 'image')
+        self.assertContains(response_profile, 'image')
+        self.assertContains(response_group, 'image')
 
     @override_settings(CACHES=TEST_CACHES)
     def test_post_with_non_graphic_files(self):
-        """проверяют, что срабатывает защита от загрузки файлов не-графических форматов."""
+        """защита от загрузки файлов не-графических форматов."""
 
         self.client.force_login(self.user)
         with open('models.py', 'rb') as file:
@@ -193,7 +213,8 @@ class PostTest6(TestCase):
         """Напишите тесты, которые проверяют работу кэша."""
 
         self.client.force_login(self.user)
-        self.client.post('/new/', {'text': 'new text for testing cash', 'group': self.group.id})
+        self.client.post('/new/', {'text': 'new text for testing cash',
+                                   'group': self.group.id})
         response = self.client.get("/")
         self.assertNotContains(response, 'new text for testing cash')
         time.sleep(20)
@@ -201,9 +222,9 @@ class PostTest6(TestCase):
         self.assertContains(response_2, 'new text for testing cash')
 
     @override_settings(CACHES=TEST_CACHES)
-    def test_follow_unfollow_authorized_user(self):
-        """Авторизованный пользователь может подписываться на других
-        пользователей и удалять их из подписок."""
+    def test_follow_authorized_user(self):
+        """Авторизованный пользователь может подписываться
+        на других пользователей."""
 
         self.client.force_login(self.user1)
         followers = Follow.objects.filter(author=self.user2.id).count()
@@ -215,6 +236,13 @@ class PostTest6(TestCase):
         following = Follow.objects.filter(user=self.user1).count()
         self.assertEqual(followers, 1)
         self.assertEqual(following, 1)
+
+    @override_settings(CACHES=TEST_CACHES)
+    def test_unfollow_authorized_user(self):
+        """Авторизованный пользователь может удалять других
+        пользователей из подписок."""
+
+        self.client.force_login(self.user1)
         self.client.get(f"/{self.user2.username}/unfollow/")
         followers = Follow.objects.filter(author=self.user2).count()
         following = Follow.objects.filter(user=self.user1).count()
@@ -223,7 +251,8 @@ class PostTest6(TestCase):
 
     def test_check_new_post_from_follower(self):
         """Новая запись пользователя появляется в ленте тех,
-        кто на него подписан и не появляется в ленте тех, кто не подписан на него."""
+        кто на него подписан и не появляется в ленте тех,
+        кто не подписан на него."""
 
         Follow.objects.create(user=self.user1, author=self.user2)
         self.client.force_login(self.user2)
