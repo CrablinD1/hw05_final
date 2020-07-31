@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from posts.models import Post, Group
+from posts.models import Post, Group, Comment
 
 
 class PostAdmin(admin.ModelAdmin):
@@ -14,5 +14,10 @@ class GroupAdmin(admin.ModelAdmin):
     list_display = ("pk", "title", "slug", "description")
 
 
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ("pk", "post", "author", "text", "created")
+
+
 admin.site.register(Post, PostAdmin)
 admin.site.register(Group, GroupAdmin)
+admin.site.register(Comment, CommentAdmin)

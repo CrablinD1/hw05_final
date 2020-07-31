@@ -138,7 +138,7 @@ def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     already_followed = Follow.objects.filter(user=request.user.id,
                                              author=author.id).exists()
-    if author.id != request.user.id and not already_followed:
+    if author != request.user and not already_followed:
         Follow.objects.create(user=request.user, author=author)
     return redirect('profile', username=username)
 
